@@ -40,7 +40,7 @@ export async function GET(request){try{
  const sites=(await db().prepare("SELECT id,name,active FROM accounts WHERE role='site' ORDER BY id").all()).results;const suppliers=(can(a,'suppliers')||can(a,'review')||can(a,'dispatch'))?(await db().prepare('SELECT * FROM suppliers ORDER BY name').all()).results:[];
  const users=can(a,'users')?(await db().prepare('SELECT id,role,name,active,permissions FROM accounts ORDER BY id').all()).results.map(safeAccount):[];const sync=can(a,'users')?await db().prepare("SELECT * FROM sync_status WHERE id='google'").first():null;
  return output({branding:await readBranding(db()),users,sync,syncEnabled:!!env.SYNC_READ_TOKEN_HASH,user:safeAccount(a),requests:rows.slice(0,100).map(r=>publicRecord(parse(r),a)),more:rows.length>100,stats:stats.map(({state,count,value,approvedValue})=>prices?{state,count,value,approvedValue}:{state,count}),sites:admin?sites:sites.filter(x=>x.id===a.id),suppliers});
- }catch(e){return output({error:e.status?e.message:'تعذر تحميل البيانات'},e.status||500);}}
+ }catch(e){console.error("PURCHASE_API_ERROR",{name:e.name,code:e.code,status:e.status});return output({error:e.status?e.message:'تعذر تحميل البيانات'},e.status||500);}}
 export async function POST(request){try{
  const origin=request.headers.get('Origin');if(!origin||origin!==new URL(request.url).origin)fail('مصدر الطلب غير صحيح',403);
  if(Number(request.headers.get('Content-Length'))>100000)fail('الطلب كبير جدًا',413);
@@ -86,4 +86,4 @@ export async function POST(request){try{
   return output({request:publicRecord(parse(await database.prepare('SELECT * FROM requests WHERE id=?').bind(record.id).first()),a)});
  }
  fail('إجراء غير معروف');
- }catch(e){return output({error:e.status?e.message:'تعذر حفظ العملية'},e.status||500);}}
+ }catch(e){console.error("PURCHASE_API_ERROR",{name:e.name,code:e.code,status:e.status});return output({error:e.status?e.message:'تعذر حفظ العملية'},e.status||500);}}
