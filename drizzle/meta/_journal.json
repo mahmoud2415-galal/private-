@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791237592776,
+      "tag": "0000_thankful_loki",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791239834439,
+      "tag": "0001_sleepy_bromley",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791242120396,
+      "tag": "0002_whole_surge",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791243357990,
+      "tag": "0003_nervous_magus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791279649077,
+      "tag": "0004_steep_husk",
+      "breakpoints": true
+    }
+  ]
+}

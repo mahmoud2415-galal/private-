@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+import {setLanguage,getLanguage,loadLanguage,translateString,uiText,subscribeLanguage} from '../lib/i18n.mjs';
+test('Arabic and English preference changes translate UI without modifying stored business values',()=>{
+ const values=new Map();globalThis.localStorage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
+ try{setLanguage('ar');assert.equal(uiText('طلبات الشراء'),'طلبات الشراء');let notified=0;const unsubscribe=subscribeLanguage(()=>notified++);setLanguage('en');assert.equal(uiText('طلبات الشراء'),'Purchase requests');assert.equal(uiText('غير مدفوعة'),'Unpaid');assert.equal(uiText('اسم المورد'),'Supplier name');assert.equal(uiText('عاجلة'),'Urgent');assert.equal(translateString('تفاصيل PR-000123'),'Details PR-000123');assert.equal(getLanguage(),'en');assert.equal(values.get('procurement-language'),'en');const item={name:'مناديل رول',qty:20,priority:'عاجلة'};assert.equal(uiText(item),item);assert.equal(item.priority,'عاجلة');assert.equal(uiText(20),20);assert.equal(uiText('Libassa Hotel'),'Libassa Hotel');unsubscribe();setLanguage('ar');assert.equal(notified,1);values.set('procurement-language','en');loadLanguage();assert.equal(getLanguage(),'en');setLanguage('unsupported');assert.equal(getLanguage(),'en');setLanguage('ar');}finally{delete globalThis.localStorage;}
+});
+test('translated enum options retain canonical values and buttons retain content',async()=>{
+ for(const file of ['app/page.tsx','components/procurement/workspace.tsx']){const source=await readFile(new URL('../'+file,import.meta.url),'utf8');const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let enumOptions=0;function visit(node){if(ts.isJsxElement(node)){const tag=node.openingElement.tagName.getText(tree);if(tag==='option'){const text=node.children.map(c=>c.getText(tree)).join('');if(/uiText\((x|m)\)/.test(text)){const attr=node.openingElement.attributes.properties.find(p=>ts.isJsxAttribute(p)&&p.name.getText(tree)==='value');assert.ok(attr,'Translated enum option needs an explicit canonical value');enumOptions++;}}if(tag==='button'){assert.ok(node.children.some(c=>!ts.isJsxText(c)||c.text.trim()),'Button content must not disappear');}}ts.forEachChild(node,visit);}visit(tree);assert.ok(enumOptions>0);}
+});
