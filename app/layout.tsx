@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "مسار | متابعة المشتريات",
+  title: "منجز | متابعة المشتريات",
   description: "طلبات المواقع، الاعتماد والتوريد والاستلام في مكان واحد.",
   icons: {
     icon: "/favicon.svg",
