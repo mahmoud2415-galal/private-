@@ -28,7 +28,17 @@ test('workflow, role boundaries, persistence, retries and session revocation',as
   const get=async(cookie='',q='')=>{const response=await GET(new Request(origin+'/api/purchases'+q,{headers:{Cookie:cookie}}));return {status:response.status,data:await response.json()}};
   assert.equal((await get()).status,401);assert.equal((await post({op:'login',code:users[0].code},'','https://evil.test')).status,403);assert.equal((await post({op:'login',code:'wrong'})).status,401);
   const admin=(await post({op:'login',code:users[0].code})).cookie;const one=(await post({op:'login',code:users[1].code.toLowerCase()})).cookie;const two=(await post({op:'login',code:users[2].code})).cookie;assert.ok(admin&&one&&two);
-  const initialBranding=(await get(admin)).data.branding;assert.equal(initialBranding.revision,0);assert.equal(initialBranding.labels.systemName,'مسار');
+  const siteInput={op:'create_site',id:'s05',name:'الموقع الخامس',newPassword:'TESTNEWSITE12345',confirmPassword:'TESTNEWSITE12345'};
+  assert.equal((await post(siteInput,one)).status,403);
+  assert.equal((await post({...siteInput,confirmPassword:'different'},admin)).status,400);
+  assert.equal((await post({...siteInput,id:'ADMIN'},admin)).status,400);
+  const createdSite=await post(siteInput,admin);assert.equal(createdSite.status,201);assert.equal(createdSite.data.user.id,'S05');
+  assert.equal(createdSite.data.user.permissions.prices,false);assert.equal(createdSite.data.user.password_hash,undefined);
+  assert.equal((await post({...siteInput,id:'S05'},admin)).status,409);
+  const siteLogin=await post({op:'login',username:'s05',code:siteInput.newPassword});assert.equal(siteLogin.status,200);
+  assert.ok((await get(admin)).data.sites.some(x=>x.id==='S05'&&x.name===siteInput.name));
+  assert.equal((await get(siteLogin.cookie)).data.sites.length,1);
+  const initialBranding=(await get(admin)).data.branding;assert.equal(initialBranding.revision,0);assert.equal(initialBranding.labels.systemName,'منجز');
   const labels={...initialBranding.labels,systemName:'مشتريات المؤسسة',requestsPage:'احتياجات المواقع',suppliersPage:'شركاء التوريد',usersPage:'الحسابات',syncPage:'نسخة الشيت'};
   assert.equal((await post({op:'settings',labels,revision:0})).status,401);
   assert.equal((await post({op:'settings',labels,revision:0},one)).status,403);

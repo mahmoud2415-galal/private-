@@ -65,6 +65,17 @@ export async function POST(request){try{
  if(input.op==='supplier'){
   if(!can(a,'suppliers'))fail('لا تملك صلاحية إدارة الموردين',403);const id=input.id||crypto.randomUUID();await database.prepare('INSERT INTO suppliers (id,name,phone,email,notes,active) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,phone=excluded.phone,email=excluded.email,notes=excluded.notes,active=excluded.active').bind(required(id,80),required(input.name,160),clean(input.phone??'',80),clean(input.email??'',120),clean(input.notes??'',1000),input.active===false?0:1).run();return output({ok:true});
  }
+ if(input.op==='create_site'){
+  if(a.role!=='admin'||!can(a,'users'))fail('يضيف المدير المواقع الجديدة فقط',403);
+  const id=required(input.id,32).toUpperCase();if(!/^[A-Z0-9_-]{2,32}$/.test(id)||id==='ADMIN')fail('اسم المستخدم: من 2 إلى 32 حرفًا إنجليزيًا أو رقمًا أو _ أو -');
+  const name=required(input.name,160);
+  if(await database.prepare('SELECT id FROM accounts WHERE UPPER(id)=?').bind(id).first())fail('اسم المستخدم موجود بالفعل؛ اختر اسمًا آخر',409);
+  if(input.newPassword!==input.confirmPassword)fail('تأكيد كلمة المرور غير مطابق');
+  let flags,passwordHash;try{flags=normalizePermissions(input.permissions??permissions({role:'site'}));passwordHash=await makePassword(input.newPassword);}catch(e){fail(e.message);}
+  const result=await database.prepare("INSERT INTO accounts (id,role,name,code_hash,password_hash,active,permissions) VALUES (?,'site',?,?,?,?,?) ON CONFLICT(id) DO NOTHING").bind(id,name,await hashCode(crypto.randomUUID()),passwordHash,input.active===false?0:1,JSON.stringify(flags)).run();
+  if(result.meta.changes!==1)fail('اسم المستخدم موجود بالفعل؛ اختر اسمًا آخر',409);
+  return output({ok:true,user:safeAccount(await database.prepare('SELECT * FROM accounts WHERE id=?').bind(id).first())},201);
+ }
  if(input.op==='site'||input.op==='user'){
   if(!can(a,'users'))fail('لا تملك صلاحية إدارة المستخدمين',403);const target=await database.prepare('SELECT * FROM accounts WHERE id=?').bind(required(input.id,80)).first();if(!target)fail('المستخدم غير موجود',404);
   if(target.role==='admin'&&target.id!==a.id)fail('الحساب الرئيسي يعدّل بياناته بنفسه',403);
